@@ -1,36 +1,32 @@
 """Tests for distutils._msvccompiler."""
-import sys
+
 import os
+import sys
 import threading
 import unittest.mock as mock
-
-import pytest
-
+from distutils import _msvccompiler
 from distutils.errors import DistutilsPlatformError
 from distutils.tests import support
-from distutils import _msvccompiler
 
+import pytest
 
 needs_winreg = pytest.mark.skipif('not hasattr(_msvccompiler, "winreg")')
 
 
 class Testmsvccompiler(support.TempdirManager):
-    def test_no_compiler(self):
+    def test_no_compiler(self, monkeypatch):
         # makes sure query_vcvarsall raises
         # a DistutilsPlatformError if the compiler
         # is not found
         def _find_vcvarsall(plat_spec):
             return None, None
 
-        old_find_vcvarsall = _msvccompiler._find_vcvarsall
-        _msvccompiler._find_vcvarsall = _find_vcvarsall
-        try:
-            with pytest.raises(DistutilsPlatformError):
-                _msvccompiler._get_vc_env(
-                    'wont find this version',
-                )
-        finally:
-            _msvccompiler._find_vcvarsall = old_find_vcvarsall
+        monkeypatch.setattr(_msvccompiler, '_find_vcvarsall', _find_vcvarsall)
+
+        with pytest.raises(DistutilsPlatformError):
+            _msvccompiler._get_vc_env(
+                'wont find this version',
+            )
 
     @needs_winreg
     def test_get_vc_env_unicode(self):

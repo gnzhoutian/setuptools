@@ -1,15 +1,14 @@
 """Tests for distutils.command.upload."""
+
 import os
 import unittest.mock as mock
-from urllib.request import HTTPError
-
-
 from distutils.command import upload as upload_mod
 from distutils.command.upload import upload
 from distutils.core import Distribution
 from distutils.errors import DistutilsError
-
 from distutils.tests.test_config import PYPIRC, BasePyPIRCCommandTestCase
+from urllib.request import HTTPError
+
 import pytest
 
 PYPIRC_LONG_PASSWORD = """\
@@ -77,7 +76,6 @@ class TestUpload(BasePyPIRCCommandTestCase):
         return self.last_open
 
     def test_finalize_options(self):
-
         # new format
         self.write_file(self.rc, PYPIRC)
         dist = Distribution()
@@ -119,7 +117,7 @@ class TestUpload(BasePyPIRCCommandTestCase):
         # lets run it
         pkg_dir, dist = self.create_dist(dist_files=dist_files)
         cmd = upload(dist)
-        cmd.show_response = 1
+        cmd.show_response = True
         cmd.ensure_finalized()
         cmd.run()
 
@@ -169,7 +167,7 @@ class TestUpload(BasePyPIRCCommandTestCase):
             dist_files=dist_files, description='long description\r'
         )
         cmd = upload(dist)
-        cmd.show_response = 1
+        cmd.show_response = True
         cmd.ensure_finalized()
         cmd.run()
 

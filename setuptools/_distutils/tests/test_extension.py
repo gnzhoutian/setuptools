@@ -1,11 +1,13 @@
 """Tests for distutils.extension."""
+
 import os
+import pathlib
 import warnings
+from distutils.extension import Extension, read_setup_file
 
-from distutils.extension import read_setup_file, Extension
-
-from .py38compat import check_warnings
 import pytest
+
+from .compat.py38 import check_warnings
 
 
 class TestExtension:
@@ -67,12 +69,14 @@ class TestExtension:
         assert ext.name == 'name'
 
         # the second argument, which is the list of files, must
-        # be a list of strings
+        # be a list of strings or PathLike objects
         with pytest.raises(AssertionError):
             Extension('name', 'file')
         with pytest.raises(AssertionError):
             Extension('name', ['file', 1])
         ext = Extension('name', ['file1', 'file2'])
+        assert ext.sources == ['file1', 'file2']
+        ext = Extension('name', [pathlib.Path('file1'), pathlib.Path('file2')])
         assert ext.sources == ['file1', 'file2']
 
         # others arguments have defaults

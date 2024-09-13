@@ -1,21 +1,13 @@
 import os
-import sys
-import functools
 import platform
+import sys
 import textwrap
 
 import pytest
 
-
 IS_PYPY = '__pypy__' in sys.builtin_module_names
 
-
-def popen_text(call):
-    """
-    Augment the Popen call with the parameters to ensure unicode text.
-    """
-    return functools.partial(call, universal_newlines=True) \
-        if sys.version_info < (3, 7) else functools.partial(call, text=True)
+_TEXT_KWARGS = {"text": True, "encoding": "utf-8"}  # For subprocess.run
 
 
 def win_sr(env):
@@ -25,9 +17,7 @@ def win_sr(env):
     > Fatal Python error: _Py_HashRandomization_Init: failed to
     > get random numbers to initialize Python
     """
-    if env is None:
-        return
-    if platform.system() == 'Windows':
+    if env and platform.system() == 'Windows':
         env['SYSTEMROOT'] = os.environ['SYSTEMROOT']
     return env
 
@@ -35,7 +25,7 @@ def win_sr(env):
 def find_distutils(venv, imports='distutils', env=None, **kwargs):
     py_cmd = 'import {imports}; print(distutils.__file__)'.format(**locals())
     cmd = ['python', '-c', py_cmd]
-    return popen_text(venv.run)(cmd, env=win_sr(env), **kwargs)
+    return venv.run(cmd, env=win_sr(env), **_TEXT_KWARGS, **kwargs)
 
 
 def count_meta_path(venv, env=None):
@@ -44,9 +34,10 @@ def count_meta_path(venv, env=None):
         import sys
         is_distutils = lambda finder: finder.__class__.__name__ == "DistutilsMetaFinder"
         print(len(list(filter(is_distutils, sys.meta_path))))
-        """)
+        """
+    )
     cmd = ['python', '-c', py_cmd]
-    return int(popen_text(venv.run)(cmd, env=win_sr(env)))
+    return int(venv.run(cmd, env=win_sr(env), **_TEXT_KWARGS))
 
 
 skip_without_stdlib_distutils = pytest.mark.skipif(
@@ -92,7 +83,7 @@ def test_pip_import(venv):
     Regression test for #3002.
     """
     cmd = ['python', '-c', 'import pip']
-    popen_text(venv.run)(cmd)
+    venv.run(cmd, **_TEXT_KWARGS)
 
 
 def test_distutils_has_origin():
@@ -132,15 +123,15 @@ print("success")
         ("local", "dir_util"),
         ("local", "file_util"),
         ("local", "archive_util"),
-    ]
+    ],
 )
 def test_modules_are_not_duplicated_on_import(
-        distutils_version, imported_module, tmpdir_cwd, venv
+    distutils_version, imported_module, tmpdir_cwd, venv
 ):
     env = dict(SETUPTOOLS_USE_DISTUTILS=distutils_version)
     script = ENSURE_IMPORTS_ARE_NOT_DUPLICATED.format(imported_module=imported_module)
     cmd = ['python', '-c', script]
-    output = popen_text(venv.run)(cmd, env=win_sr(env)).strip()
+    output = venv.run(cmd, env=win_sr(env), **_TEXT_KWARGS).strip()
     assert output == "success"
 
 
@@ -159,10 +150,10 @@ print("success")
     [
         "local",
         pytest.param("stdlib", marks=skip_without_stdlib_distutils),
-    ]
+    ],
 )
 def test_log_module_is_not_duplicated_on_import(distutils_version, tmpdir_cwd, venv):
     env = dict(SETUPTOOLS_USE_DISTUTILS=distutils_version)
     cmd = ['python', '-c', ENSURE_LOG_IMPORT_IS_NOT_DUPLICATED]
-    output = popen_text(venv.run)(cmd, env=win_sr(env)).strip()
+    output = venv.run(cmd, env=win_sr(env), **_TEXT_KWARGS).strip()
     assert output == "success"
